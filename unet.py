@@ -17,8 +17,13 @@ except ImportError:
 import matplotlib.pyplot as plt
 
 
+normalization = True
+
 input_file = './train_data/train_data.hdf5'
-output_dir = './unet_result'
+if normalization:
+    output_dir = './unet_normalization_result'
+else:
+    output_dir = './unet_result'
 
 if not os.path.isdir(output_dir):
     os.mkdir(output_dir)
@@ -39,6 +44,21 @@ test1 = rec_map[900:]
 train2 = in_map[:600]
 val2 = in_map[600:900]
 test2 = in_map[900:]
+
+if normalization:
+    train_mean = np.mean(train1, axis=(1, 2))
+    val_mean = np.mean(val1, axis=(1, 2))
+    test_mean = np.mean(test1, axis=(1, 2))
+    train_std = np.std(train1, axis=(1, 2))
+    val_std = np.std(val1, axis=(1, 2))
+    test_std = np.std(test1, axis=(1, 2))
+
+    train1 = (train1 - train_mean[:, np.newaxis, np.newaxis]) / train_std[:, np.newaxis, np.newaxis]
+    train2 = (train2 - train_mean[:, np.newaxis, np.newaxis]) / train_std[:, np.newaxis, np.newaxis]
+    val1 = (val1 - val_mean[:, np.newaxis, np.newaxis]) / val_std[:, np.newaxis, np.newaxis]
+    val2 = (val2 - val_mean[:, np.newaxis, np.newaxis]) / val_std[:, np.newaxis, np.newaxis]
+    test1 = (test1 - test_mean[:, np.newaxis, np.newaxis]) / test_std[:, np.newaxis, np.newaxis]
+    test2 = (test2 - test_mean[:, np.newaxis, np.newaxis]) / test_std[:, np.newaxis, np.newaxis]
 
 
 # unet
@@ -82,7 +102,21 @@ with open('unet.json', 'w') as f:
         f.write(json_string)
 
 
-model.compile(loss=tf.keras.losses.mse, optimizer='adam', metrics=['accuracy'])
+def crop_mse_loss(theta1=0.0, theta2=np.radians(120.0)):
+    def crop_mse(y_true, y_pred):
+        nside = hp.npix2nside(y_true.shape[1])
+        ipix = hp.query_strip(nside, theta1, theta2, inclusive=True, nest=False, buff=None)
+        y_true_crop = tf.gather(y_true, ipix, axis=1)
+        y_pred_crop = tf.gather(y_pred, ipix, axis=1)
+        # print (y_true_crop.shape)
+        # print (y_pred_crop.shape)
+        return tf.keras.backend.mean(tf.keras.backend.square(y_pred_crop - y_true_crop))
+    return crop_mse
+
+
+# model.compile(loss=tf.keras.losses.mse, optimizer='adam', metrics=['accuracy'])
+# model.compile(loss=tf.keras.losses.mse, optimizer='adam')
+model.compile(loss=crop_mse_loss(), optimizer='adam')
 
 
 batch_size = 32
@@ -91,7 +125,7 @@ epochs = 1
 
 loss = []
 val_loss = []
-for ii in range(50):
+for ii in range(100):
 
     # es_cb = EarlyStopping(monitor='val_loss', patience=2, verbose=1, mode='auto')
     # chkpt = saveDir + 'AutoEncoder_Cifar10_denoise_weights.{epoch:02d}-{loss:.2f}-{val_loss:.2f}.hdf5'
@@ -110,6 +144,8 @@ for ii in range(50):
     model.save_weights(output_dir + '/model_weights_%04d.h5' % ii)
 
     predict = model.predict(train1[0].reshape(1, npix, 1))
+    if normalization:
+        predict = predict * test_std[0] + test_mean[0]
 
     # plot predict
     fig = plt.figure(1, figsize=(13, 5))
