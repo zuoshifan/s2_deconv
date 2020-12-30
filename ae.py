@@ -32,8 +32,6 @@ with h5py.File(input_file, 'r') as f:
     in_map = f['input'][:]
     rec_map = f['reconstruction'][:]
 
-in_map = np.repeat(in_map, 1000, axis=0).astype(np.float32)
-rec_map = np.repeat(rec_map, 1000, axis=0).astype(np.float32)
 print( in_map.shape )
 
 # read in dataset

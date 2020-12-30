@@ -10,6 +10,7 @@ from simple_metrics import mean_squared_error
 from structural_similarity import structural_similarity
 
 
+normalization = True
 epoch = 99
 
 input_file = './train_data/train_data.hdf5'
@@ -18,8 +19,6 @@ with h5py.File(input_file, 'r') as f:
     in_map = f['input'][:]
     rec_map = f['reconstruction'][:]
 
-in_map = np.repeat(in_map, 1000, axis=0).astype(np.float32)
-rec_map = np.repeat(rec_map, 1000, axis=0).astype(np.float32)
 print( in_map.shape )
 
 # read in dataset
@@ -43,7 +42,10 @@ for net in nets:
     # net = 'unet'
     # net = 'unet1'
 
-    model_weight_dir = './%s_normalization_result' % net
+    if normalization:
+        model_weight_dir = './%s_normalization_result' % net
+    else:
+        model_weight_dir = './%s_result' % net
 
     # load model
     with open('%s.json' % net, 'r') as f:
