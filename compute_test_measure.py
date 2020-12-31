@@ -10,7 +10,7 @@ from simple_metrics import mean_squared_error
 from structural_similarity import structural_similarity
 
 
-normalization = True
+normalization = False
 epoch = 99
 
 input_file = './train_data/train_data.hdf5'
