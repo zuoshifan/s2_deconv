@@ -98,7 +98,7 @@ relu5 = tf.keras.layers.Activation('relu')(conv5)
 conv5 = nnhealpix.layers.ConvNeighbours(nside, filters=32, kernel_size=9)(relu5)
 relu5 = tf.keras.layers.Activation('relu')(conv5)
 
-conv6 = tf.keras.layers.Conv1D(1, kernel_size=1)(conv5)
+conv6 = tf.keras.layers.Conv1D(1, kernel_size=1)(relu5)
 # outputs = tf.keras.layers.Activation('relu')(conv6)
 outputs = tf.keras.layers.Activation('linear')(conv6)
 
